@@ -15,6 +15,7 @@
  */
 package org.greenrobot.eventbus;
 
+import android.os.HandlerThread;
 import android.os.Looper;
 import android.util.Log;
 
@@ -61,6 +62,7 @@ public class EventBus {
 
     private final HandlerPoster mainThreadPoster;
     private final BackgroundPoster backgroundPoster;
+    private final Map<String, HandlerPoster> extraBackgroundPosters;
     private final AsyncPoster asyncPoster;
     private final SubscriberMethodFinder subscriberMethodFinder;
     private final ExecutorService executorService;
@@ -110,6 +112,7 @@ public class EventBus {
         stickyEvents = new ConcurrentHashMap<>();
         mainThreadPoster = new HandlerPoster(this, Looper.getMainLooper(), 10);
         backgroundPoster = new BackgroundPoster(this);
+        extraBackgroundPosters = new HashMap<>();
         asyncPoster = new AsyncPoster(this);
         indexCount = builder.subscriberInfoIndexes != null ? builder.subscriberInfoIndexes.size() : 0;
         subscriberMethodFinder = new SubscriberMethodFinder(builder.subscriberInfoIndexes,
@@ -121,6 +124,15 @@ public class EventBus {
         throwSubscriberException = builder.throwSubscriberException;
         eventInheritance = builder.eventInheritance;
         executorService = builder.executorService;
+
+        // Add extra background threads
+        if (builder.backgroundThreadNames != null) {
+            for (String backgroundThreadName : builder.backgroundThreadNames) {
+                final HandlerThread handlerThread = new HandlerThread(backgroundThreadName);
+                handlerThread.start();
+                extraBackgroundPosters.put(backgroundThreadName, new HandlerPoster(this, handlerThread.getLooper(), 10));
+            }
+        }
     }
 
     /**
@@ -423,10 +435,22 @@ public class EventBus {
                 }
                 break;
             case BACKGROUND:
+                final String backgroundThreadName = subscription.subscriberMethod.backgroundThreadName;
+                final boolean defaultBackgroundThread = backgroundThreadName == null || backgroundThreadName.length() == 0;
                 if (isMainThread) {
-                    backgroundPoster.enqueue(subscription, event);
+                    if (defaultBackgroundThread) {
+                        backgroundPoster.enqueue(subscription, event);
+                    }
+                    else {
+                        enqueueToBackgroundThread(backgroundThreadName, subscription, event);
+                    }
                 } else {
-                    invokeSubscriber(subscription, event);
+                    if (defaultBackgroundThread) {
+                        invokeSubscriber(subscription, event);
+                    }
+                    else {
+                        enqueueToBackgroundThread(backgroundThreadName, subscription, event);
+                    }
                 }
                 break;
             case ASYNC:
@@ -513,6 +537,17 @@ public class EventBus {
                         subscription.subscriber);
                 post(exEvent);
             }
+        }
+    }
+
+    /** Dispatch to the specified background thread. */
+    private void enqueueToBackgroundThread(String backgroundThreadName, Subscription subscription, Object event) {
+        final HandlerPoster backgroundHandlerPoster = extraBackgroundPosters.get(backgroundThreadName);
+        if (backgroundHandlerPoster != null) {
+            backgroundHandlerPoster.enqueue(subscription, event);
+        }
+        else {
+            handleSubscriberException(subscription, event, new IllegalThreadStateException("No background thread found for: " + backgroundThreadName));
         }
     }
 

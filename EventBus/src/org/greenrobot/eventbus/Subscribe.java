@@ -30,6 +30,13 @@ public @interface Subscribe {
     ThreadMode threadMode() default ThreadMode.POSTING;
 
     /**
+     * The background thread name to post the event on.
+     * This is only applicable for {@link ThreadMode#BACKGROUND} and if a background thread
+     * with a matching name has been created via {@link EventBusBuilder#addBackgroundThread(String)}.
+     */
+    String backgroundThreadName() default "";
+
+    /**
      * If true, delivers the most recent sticky event (posted with
      * {@link EventBus#postSticky(Object)}) to this subscriber (if event available).
      */

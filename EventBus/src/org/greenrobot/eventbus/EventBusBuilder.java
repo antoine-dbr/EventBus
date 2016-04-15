@@ -40,6 +40,7 @@ public class EventBusBuilder {
     ExecutorService executorService = DEFAULT_EXECUTOR_SERVICE;
     List<Class<?>> skipMethodVerificationForClasses;
     List<SubscriberInfoIndex> subscriberInfoIndexes;
+    List<String> backgroundThreadNames;
 
     EventBusBuilder() {
     }
@@ -134,6 +135,17 @@ public class EventBusBuilder {
             subscriberInfoIndexes = new ArrayList<>();
         }
         subscriberInfoIndexes.add(index);
+        return this;
+    }
+
+    /** Adds an extra background thread. */
+    public EventBusBuilder addBackgroundThread(String backgroundThreadName) {
+        if(backgroundThreadNames == null) {
+            backgroundThreadNames = new ArrayList<>();
+        }
+        if (backgroundThreadName != null && backgroundThreadName.length() > 0) {
+            backgroundThreadNames.add(backgroundThreadName);
+        }
         return this;
     }
 
