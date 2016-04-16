@@ -18,7 +18,9 @@ package org.greenrobot.eventbus;
 import org.greenrobot.eventbus.meta.SubscriberInfoIndex;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -40,7 +42,7 @@ public class EventBusBuilder {
     ExecutorService executorService = DEFAULT_EXECUTOR_SERVICE;
     List<Class<?>> skipMethodVerificationForClasses;
     List<SubscriberInfoIndex> subscriberInfoIndexes;
-    List<String> backgroundThreadNames;
+    Set<String> backgroundThreadNames;
 
     EventBusBuilder() {
     }
@@ -141,7 +143,7 @@ public class EventBusBuilder {
     /** Adds an extra background thread. */
     public EventBusBuilder addBackgroundThread(String backgroundThreadName) {
         if(backgroundThreadNames == null) {
-            backgroundThreadNames = new ArrayList<>();
+            backgroundThreadNames = new HashSet<>(); // A set to avoid duplicate names
         }
         if (backgroundThreadName != null && backgroundThreadName.length() > 0) {
             backgroundThreadNames.add(backgroundThreadName);
