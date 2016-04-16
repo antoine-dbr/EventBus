@@ -16,6 +16,7 @@
 package org.greenrobot.eventbus;
 
 import android.os.Handler;
+import android.os.HandlerThread;
 import android.os.Looper;
 import android.os.Message;
 import android.os.SystemClock;
@@ -27,11 +28,18 @@ final class HandlerPoster extends Handler {
     private final EventBus eventBus;
     private boolean handlerActive;
 
+    HandlerPoster(EventBus eventBus, String name, int maxMillisInsideHandleMessage) {
+        this(eventBus, new HandlerThread(name).getLooper(), maxMillisInsideHandleMessage);
+    }
+
     HandlerPoster(EventBus eventBus, Looper looper, int maxMillisInsideHandleMessage) {
         super(looper);
         this.eventBus = eventBus;
         this.maxMillisInsideHandleMessage = maxMillisInsideHandleMessage;
         queue = new PendingPostQueue();
+        if (!looper.getThread().isAlive()) {
+            looper.getThread().start();
+        }
     }
 
     void enqueue(Subscription subscription, Object event) {

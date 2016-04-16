@@ -15,7 +15,7 @@
  */
 package org.greenrobot.eventbus;
 
-import android.os.HandlerThread;
+import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
 
@@ -128,9 +128,7 @@ public class EventBus {
         // Add extra background threads
         if (builder.backgroundThreadNames != null) {
             for (String backgroundThreadName : builder.backgroundThreadNames) {
-                final HandlerThread handlerThread = new HandlerThread(backgroundThreadName);
-                handlerThread.start();
-                extraBackgroundPosters.put(backgroundThreadName, new HandlerPoster(this, handlerThread.getLooper(), 10));
+                extraBackgroundPosters.put(backgroundThreadName, new HandlerPoster(this, backgroundThreadName, 10));
             }
         }
     }
@@ -369,6 +367,14 @@ public class EventBus {
             }
         }
         return false;
+    }
+
+    /** Get the background handler associated with a custom background thread. */
+    public Handler getBackgroundHandlerForName(String backgroundThreadName) {
+        if (extraBackgroundPosters.containsKey(backgroundThreadName)) {
+            return extraBackgroundPosters.get(backgroundThreadName);
+        }
+        return null;
     }
 
     private void postSingleEvent(Object event, PostingThreadState postingState) throws Error {
